@@ -10,10 +10,19 @@ const posts = (await getCollection('blog'))
 	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
 	.slice(0, 5);
 
-const notes = (await getCollection('notes'))
-	.filter((n) => !n.data.draft)
-	.sort((a, b) => (b.data.importedDate?.getTime() ?? 0) - (a.data.importedDate?.getTime() ?? 0))
+const allNotes = (await getCollection('notes')).filter((n) => !n.data.draft);
+
+// 首页优先展示带批注的、或是自己写的（非归档文档）
+const notes = allNotes
+	.slice()
+	.sort((a, b) => {
+		const score = (n: (typeof allNotes)[number]) =>
+			(n.data.annotations?.length ?? 0) * 10 + (n.data.group ? 0 : 100);
+		return score(b) - score(a);
+	})
 	.slice(0, 4);
+
+const noteTotal = allNotes.length;
 ---
 
 <!doctype html>
@@ -68,12 +77,12 @@ const notes = (await getCollection('notes'))
 
 			<section class="section">
 				<div class="section-head">
-					<h2>读书笔记</h2>
-					<a href="/notes">全部 →</a>
+					<h2>文库</h2>
+					<a href="/notes">全部 {noteTotal} 篇 →</a>
 				</div>
 				{
 					notes.length === 0 ? (
-						<p class="empty">还没有导入任何文档。</p>
+						<p class="empty">文库还是空的。</p>
 					) : (
 						<ul class="note-list">
 							{notes.map((note) => (
@@ -81,7 +90,11 @@ const notes = (await getCollection('notes'))
 									<a href={`/notes/${note.id}/`}>
 										<span class="note-kind">{note.data.kind}</span>
 										<span class="note-title">{note.data.title}</span>
-										{note.data.author && <span class="note-author">{note.data.author}</span>}
+										<span class="note-author">
+											{note.data.author ?? note.data.group ?? ''}
+											{(note.data.annotations?.length ?? 0) > 0 &&
+												` · ${note.data.annotations!.length} 条批注`}
+										</span>
 									</a>
 								</li>
 							))}

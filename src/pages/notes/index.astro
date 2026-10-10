@@ -6,9 +6,7 @@ import BaseHead from '../../components/BaseHead.astro';
 import FormattedDate from '../../components/FormattedDate.astro';
 import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
 
-const notes = (await getCollection('notes')).sort(
-	(a, b) => (b.data.importedDate?.getTime() ?? 0) - (a.data.importedDate?.getTime() ?? 0),
-);
+const all = (await getCollection('notes')).filter((note) => !note.data.draft);
 
 const KIND_LABEL: Record<string, string> = {
 	book: '书籍',
@@ -16,24 +14,50 @@ const KIND_LABEL: Record<string, string> = {
 	paper: '论文',
 	document: '文档',
 };
-
 const STATUS_LABEL: Record<string, string> = {
 	reading: '在读',
 	done: '已读完',
 	paused: '搁置',
 };
+
+// 按 group 归档，未分组的落到「其它」
+interface Group {
+	name: string;
+	order: number;
+	items: typeof all;
+}
+
+const groupMap = new Map<string, Group>();
+for (const note of all) {
+	const name = note.data.group ?? '其它';
+	const order = note.data.groupOrder ?? 999;
+	if (!groupMap.has(name)) groupMap.set(name, { name, order, items: [] });
+	groupMap.get(name)!.items.push(note);
+}
+
+const groups = [...groupMap.values()].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+for (const group of groups) {
+	group.items.sort(
+		(a, b) =>
+			(a.data.order ?? 999) - (b.data.order ?? 999) ||
+			a.data.title.localeCompare(b.data.title, 'zh-CN'),
+	);
+}
+
+const total = all.length;
+const annotated = all.filter((note) => (note.data.annotations?.length ?? 0) > 0).length;
 ---
 
 <!doctype html>
 <html lang="zh-CN">
 	<head>
-		<BaseHead title={`读书笔记 · ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
+		<BaseHead title={`文库 · ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
 		<style>
 			main {
-				width: 900px;
+				width: 960px;
 			}
 			.page-head {
-				margin-bottom: 2.5em;
+				margin-bottom: 2em;
 			}
 			.page-head h1 {
 				margin-bottom: 0.3em;
@@ -41,116 +65,87 @@ const STATUS_LABEL: Record<string, string> = {
 			.page-head p {
 				color: rgb(var(--gray));
 				margin: 0;
-				max-width: 44em;
+				max-width: 46em;
 			}
-			.head-actions {
-				margin-top: 1.2em;
+			.stats {
 				display: flex;
-				gap: 0.6em;
 				flex-wrap: wrap;
+				gap: 0.5em;
+				margin-top: 1.2em;
 			}
-			.btn {
-				display: inline-block;
-				padding: 0.5em 1.1em;
-				border-radius: 999px;
-				text-decoration: none;
-				font-weight: 600;
-				font-size: 0.92em;
-				transition: 0.18s ease;
-			}
-			.btn-primary {
-				background: var(--accent);
-				color: #fff;
-			}
-			.btn-primary:hover {
-				background: var(--accent-dark);
-			}
-			.btn-ghost {
+			.stat {
+				font-size: 0.82em;
+				color: rgb(var(--gray));
 				border: 1px solid rgb(var(--gray-light));
-				color: rgb(var(--gray-dark));
+				border-radius: 999px;
+				padding: 0.25em 0.9em;
 				background: #fff;
 			}
-			.btn-ghost:hover {
-				border-color: var(--accent);
-				color: var(--accent);
+			.group {
+				margin-bottom: 2.6em;
+			}
+			.group-head {
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 1em;
+				border-bottom: 2px solid rgb(var(--gray-light));
+				padding-bottom: 0.5em;
+				margin-bottom: 1.1em;
+			}
+			.group-head h2 {
+				margin: 0;
+				font-size: 1.3em;
+			}
+			.group-head span {
+				font-size: 0.82em;
+				color: rgb(var(--gray));
 			}
 			ul {
 				list-style: none;
 				margin: 0;
 				padding: 0;
 				display: grid;
-				gap: 1.1em;
+				grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+				gap: 0.7em;
 			}
 			li a {
-				display: block;
+				display: flex;
+				flex-direction: column;
+				gap: 0.3em;
+				height: 100%;
+				box-sizing: border-box;
 				text-decoration: none;
 				color: inherit;
-				padding: 1.2em 1.35em;
+				padding: 0.85em 1em;
 				border: 1px solid rgb(var(--gray-light));
-				border-radius: 14px;
+				border-radius: 12px;
 				background: #fff;
-				transition: 0.18s ease;
+				transition: 0.16s ease;
 			}
 			li a:hover {
 				border-color: var(--accent);
 				box-shadow: var(--box-shadow);
 				transform: translateY(-2px);
 			}
-			.row {
+			.title {
+				font-weight: 700;
+				color: rgb(var(--black));
+				line-height: 1.45;
+			}
+			.sub {
+				font-size: 0.8em;
+				color: rgb(var(--gray));
 				display: flex;
 				flex-wrap: wrap;
-				gap: 0.7em;
+				gap: 0.5em;
 				align-items: center;
-				font-size: 0.82em;
-				color: rgb(var(--gray));
 			}
-			.pill {
-				border: 1px solid rgb(var(--gray-light));
-				border-radius: 999px;
-				padding: 0.1em 0.7em;
-				font-size: 0.95em;
-			}
-			.pill--accent {
-				border-color: var(--accent);
+			.tag {
 				color: var(--accent);
 			}
-			h3 {
-				margin: 0.45em 0 0.3em;
-				font-size: 1.3em;
-				color: rgb(var(--black));
-			}
-			.author {
-				margin: 0 0 0.5em;
-				color: rgb(var(--gray));
-				font-size: 0.9em;
-			}
-			.progress {
-				margin-top: 0.8em;
-				height: 4px;
-				border-radius: 999px;
-				background: rgb(var(--gray-light));
-				overflow: hidden;
-			}
-			.progress span {
-				display: block;
-				height: 100%;
-				background: var(--accent);
-				border-radius: 999px;
-			}
-			.empty {
-				color: rgb(var(--gray));
-				border: 1px dashed rgb(var(--gray-light));
-				border-radius: 14px;
-				padding: 2em;
-				text-align: center;
-			}
-			code {
-				font-size: 0.9em;
-			}
-			@media (max-width: 720px) {
-				main {
-					width: calc(100% - 2em);
-				}
+			.dot {
+				color: rgb(var(--gray-light));
 			}
 		</style>
 	</head>
@@ -158,52 +153,63 @@ const STATUS_LABEL: Record<string, string> = {
 		<Header />
 		<main>
 			<section class="page-head">
-				<h1>读书笔记</h1>
+				<h1>文库</h1>
 				<p>
-					这里放我导入的书籍与长文。阅读时可以直接在正文上划线、写批注 —— 批注保存在浏览器本地，
-					也可以导出成 JSON 带走。
+					我读过的原文和写在正文上的批注。所有内容都是仓库里的 Markdown，
+					批注写在文件的 frontmatter 里，构建时直接渲染进正文 —— 页面是只读的。
 				</p>
-				<div class="head-actions">
-					<a class="btn btn-primary" href="/notes/import">导入一份文档 →</a>
-					<a class="btn btn-ghost" href="/blog">返回博客</a>
+				<div class="stats">
+					<span class="stat">共 {total} 篇</span>
+					<span class="stat">{groups.length} 个分组</span>
+					{annotated > 0 && <span class="stat">{annotated} 篇有批注</span>}
 				</div>
 			</section>
 
 			{
-				notes.length === 0 ? (
-					<div class="empty">
-						<p>书架上还没有文档。</p>
-						<p>
-							把 Markdown 放进 <code>src/content/notes/</code> 并推送即可， 或者用
-							<a href="/notes/import">导入页面</a>先试读一段。
-						</p>
-					</div>
-				) : (
-					<ul>
-						{notes.map((note) => (
-							<li>
-								<a href={`/notes/${note.id}/`}>
-									<div class="row">
-										<span class="pill pill--accent">
-											{KIND_LABEL[note.data.kind] ?? note.data.kind}
+				groups.map((group) => (
+					<section class="group">
+						<div class="group-head">
+							<h2>{group.name}</h2>
+							<span>{group.items.length} 篇</span>
+						</div>
+						<ul>
+							{group.items.map((note) => (
+								<li>
+									<a href={`/notes/${note.id}/`}>
+										<span class="title">{note.data.title}</span>
+										<span class="sub">
+											{note.data.author && (
+												<>
+													<span>{note.data.author}</span>
+													<span class="dot">·</span>
+												</>
+											)}
+											<span>{KIND_LABEL[note.data.kind] ?? note.data.kind}</span>
+											{note.data.status && (
+												<>
+													<span class="dot">·</span>
+													<span>{STATUS_LABEL[note.data.status] ?? note.data.status}</span>
+												</>
+											)}
+											{(note.data.annotations?.length ?? 0) > 0 && (
+												<>
+													<span class="dot">·</span>
+													<span class="tag">{note.data.annotations!.length} 条批注</span>
+												</>
+											)}
+											{!note.data.group && note.data.importedDate && (
+												<>
+													<span class="dot">·</span>
+													<FormattedDate date={note.data.importedDate} />
+												</>
+											)}
 										</span>
-										{note.data.status && (
-											<span class="pill">{STATUS_LABEL[note.data.status] ?? note.data.status}</span>
-										)}
-										{note.data.importedDate && <FormattedDate date={note.data.importedDate} />}
-									</div>
-									<h3>{note.data.title}</h3>
-									{note.data.author && <p class="author">{note.data.author}</p>}
-									{note.data.progress !== undefined && (
-										<div class="progress" title={`阅读进度 ${note.data.progress}%`}>
-											<span style={`width:${note.data.progress}%`}></span>
-										</div>
-									)}
-								</a>
-							</li>
-						))}
-					</ul>
-				)
+									</a>
+								</li>
+							))}
+						</ul>
+					</section>
+				))
 			}
 		</main>
 		<Footer />

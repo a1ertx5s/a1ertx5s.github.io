@@ -1,6 +1,5 @@
 ---
 import { type CollectionEntry, getCollection, render } from 'astro:content';
-import Annotator from '../../components/Annotator.astro';
 import BaseHead from '../../components/BaseHead.astro';
 import Footer from '../../components/Footer.astro';
 import Header from '../../components/Header.astro';
@@ -20,7 +19,8 @@ interface Props {
 
 const { note } = Astro.props;
 const { Content } = await render(note);
-const { title, author, source, kind, status, progress, importedDate } = note.data;
+const { title, author, source, sourceLabel, kind, status, progress, importedDate, group, annotations } =
+	note.data;
 
 const KIND_LABEL: Record<string, string> = {
 	book: '书籍',
@@ -36,17 +36,25 @@ const STATUS_LABEL: Record<string, string> = {
 
 const meta = [
 	author,
-	source,
 	kind ? (KIND_LABEL[kind] ?? kind) : null,
 	status ? (STATUS_LABEL[status] ?? status) : null,
-	importedDate ? `导入于 ${importedDate.toLocaleDateString('zh-CN')}` : null,
+	importedDate ? `归档于 ${importedDate.toLocaleDateString('zh-CN')}` : null,
 ].filter(Boolean) as string[];
+
+const notes = annotations ?? [];
+// 与构建期 rehype 插件保持一致：找不到引文的批注不会出现在正文里，这里也不列
+const COLOR_LABEL: Record<string, string> = {
+	yellow: '黄',
+	green: '绿',
+	blue: '蓝',
+	pink: '粉',
+};
 ---
 
 <!doctype html>
 <html lang="zh-CN">
 	<head>
-		<BaseHead title={`${title} · 读书笔记 · ${SITE_TITLE}`} description={`${title} 的阅读批注`} />
+		<BaseHead title={`${title} · ${SITE_TITLE}`} description={`${title} 的阅读批注`} />
 		<style>
 			main {
 				width: 100%;
@@ -84,49 +92,67 @@ const meta = [
 				color: rgb(var(--gray));
 				font-size: 0.88em;
 			}
+			.doc-meta a {
+				color: rgb(var(--gray));
+			}
+			.doc-meta a:hover {
+				color: var(--accent);
+			}
 			.doc-meta .sep {
 				color: rgb(var(--gray-light));
 			}
-			.doc-progress {
-				display: flex;
+			.progress {
+				display: inline-flex;
 				align-items: center;
 				gap: 0.5em;
 			}
-			.doc-progress .bar {
-				width: 120px;
+			.progress .bar {
+				width: 110px;
 				height: 4px;
 				border-radius: 999px;
 				background: rgb(var(--gray-light));
 				overflow: hidden;
 			}
-			.doc-progress .bar span {
+			.progress .bar span {
 				display: block;
 				height: 100%;
 				background: var(--accent);
 			}
-			/* 正文排版：批注容器内，字号略小一些，行距放宽便于划线 */
-			:global(.annotator__doc) {
+
+			.layout {
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) 320px;
+				gap: 2.5em;
+				align-items: start;
+				max-width: 1180px;
+				margin: 0 auto;
+			}
+			.layout--solo {
+				grid-template-columns: minmax(0, 1fr);
+			}
+			.doc {
+				min-width: 0;
 				font-size: 1.02em;
 				line-height: 1.95;
 				color: rgb(var(--gray-dark));
 			}
-			:global(.annotator__doc > :first-child) {
+			.doc :global(> :first-child) {
 				margin-top: 0;
 			}
-			:global(.annotator__doc h2) {
+			.doc :global(h2) {
 				font-size: 1.5em;
 				margin: 1.9em 0 0.7em;
 				padding-top: 0.6em;
 				border-top: 1px solid rgb(var(--gray-light));
 			}
-			:global(.annotator__doc h3) {
+			.doc :global(h3) {
 				font-size: 1.18em;
 				margin: 1.5em 0 0.5em;
 			}
-			:global(.annotator__doc p) {
+			.doc :global(p) {
 				margin: 0 0 1.15em;
 			}
-			:global(.annotator__doc blockquote) {
+			.doc :global(blockquote) {
 				font-size: 1em;
 				color: rgb(var(--gray));
 				background: rgba(var(--gray-light), 35%);
@@ -134,34 +160,46 @@ const meta = [
 				padding: 0.8em 1.1em;
 				margin: 1.4em 0;
 			}
-			/* ---------- 划线样式 ---------- */
-			:global(.annotator-mark) {
-				background: var(--hl-yellow, #f5c518);
+			.doc :global(table) {
+				display: block;
+				overflow-x: auto;
+				font-size: 0.92em;
+			}
+			.doc :global(pre) {
+				overflow-x: auto;
+				font-size: 0.88em;
+				line-height: 1.6;
+			}
+			.doc :global(th),
+			.doc :global(td) {
+				border: 1px solid rgb(var(--gray-light));
+				padding: 0.4em 0.7em;
+				text-align: left;
+			}
+
+			/* ---------- 构建期渲染的批注 ---------- */
+			.doc :global(mark.hl) {
 				background: color-mix(in srgb, var(--hl-yellow, #f5c518) 42%, transparent);
 				border-bottom: 2px solid color-mix(in srgb, var(--hl-yellow, #f5c518) 85%, transparent);
 				color: inherit;
 				padding: 0.05em 0;
 				border-radius: 2px;
-				cursor: pointer;
-				transition: background 0.15s ease;
+				scroll-margin-top: 6em;
 			}
-			:global(.annotator-mark:hover) {
-				background: color-mix(in srgb, var(--hl-yellow, #f5c518) 62%, transparent);
-			}
-			:global(.annotator-mark[data-color='green']) {
-				background: color-mix(in srgb, #4caf50 38%, transparent);
+			.doc :global(mark.hl[data-color='green']) {
+				background: color-mix(in srgb, #4caf50 36%, transparent);
 				border-bottom-color: #4caf50;
 			}
-			:global(.annotator-mark[data-color='blue']) {
-				background: color-mix(in srgb, #2196f3 32%, transparent);
+			.doc :global(mark.hl[data-color='blue']) {
+				background: color-mix(in srgb, #2196f3 30%, transparent);
 				border-bottom-color: #2196f3;
 			}
-			:global(.annotator-mark[data-color='pink']) {
-				background: color-mix(in srgb, #ec407a 32%, transparent);
+			.doc :global(mark.hl[data-color='pink']) {
+				background: color-mix(in srgb, #ec407a 30%, transparent);
 				border-bottom-color: #ec407a;
 			}
-			:global(.annotator-mark.is-flashing) {
-				animation: flash 0.6s ease 2;
+			.doc :global(mark.hl:target) {
+				animation: flash 0.7s ease 2;
 			}
 			@keyframes flash {
 				0%,
@@ -169,7 +207,120 @@ const meta = [
 					background: color-mix(in srgb, var(--hl-yellow, #f5c518) 42%, transparent);
 				}
 				50% {
-					background: color-mix(in srgb, var(--hl-yellow, #f5c518) 90%, transparent);
+					background: color-mix(in srgb, var(--hl-yellow, #f5c518) 92%, transparent);
+				}
+			}
+			.doc :global(sup.hl-ref) {
+				font-size: 0.68em;
+				line-height: 0;
+				margin-left: 0.15em;
+			}
+			.doc :global(sup.hl-ref a) {
+				text-decoration: none;
+				color: var(--accent);
+				font-weight: 700;
+			}
+
+			/* ---------- 批注列表 ---------- */
+			.notes {
+				position: sticky;
+				top: 5.5em;
+			}
+			.notes-inner {
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 14px;
+				background: #fff;
+				padding: 1.1em;
+				box-shadow: 0 1px 3px rgba(var(--gray), 10%);
+			}
+			.notes-head {
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 0.5em;
+				margin-bottom: 0.75em;
+			}
+			.notes-head h2 {
+				font-size: 1.05em;
+				margin: 0;
+			}
+			.notes-head span {
+				font-size: 0.78em;
+				color: rgb(var(--gray));
+			}
+			.notes ol {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				flex-direction: column;
+				gap: 0.5em;
+				max-height: 52vh;
+				overflow: auto;
+			}
+			.notes li {
+				border: 1px solid rgb(var(--gray-light));
+				border-left: 3px solid var(--hl-yellow, #f5c518);
+				border-radius: 10px;
+				padding: 0.55em 0.7em;
+				line-height: 1.55;
+				scroll-margin-top: 6em;
+			}
+			.notes li[data-color='green'] {
+				border-left-color: #4caf50;
+			}
+			.notes li[data-color='blue'] {
+				border-left-color: #2196f3;
+			}
+			.notes li[data-color='pink'] {
+				border-left-color: #ec407a;
+			}
+			.notes li:target {
+				border-color: var(--accent);
+				background: rgba(35, 55, 255, 0.05);
+			}
+			.notes li a {
+				text-decoration: none;
+				color: inherit;
+				display: block;
+			}
+			.note-quote {
+				display: block;
+				font-size: 0.84em;
+				color: rgb(var(--black));
+			}
+			.note-quote .num {
+				color: var(--accent);
+				font-weight: 700;
+				margin-right: 0.25em;
+			}
+			.note-body {
+				display: block;
+				font-size: 0.78em;
+				color: rgb(var(--gray));
+				margin-top: 0.25em;
+			}
+			.notes-tip {
+				font-size: 0.78em;
+				line-height: 1.7;
+				color: rgb(var(--gray));
+				margin: 0.9em 0 0;
+				padding-top: 0.75em;
+				border-top: 1px dashed rgb(var(--gray-light));
+			}
+			.notes-tip code {
+				font-size: 0.92em;
+			}
+
+			@media (max-width: 980px) {
+				.layout {
+					grid-template-columns: minmax(0, 1fr);
+				}
+				.notes {
+					position: static;
+				}
+				.notes ol {
+					max-height: none;
 				}
 			}
 		</style>
@@ -178,7 +329,10 @@ const meta = [
 		<Header />
 		<main>
 			<div class="doc-head">
-				<div class="breadcrumb"><a href="/notes">← 读书笔记</a></div>
+				<div class="breadcrumb">
+					<a href="/notes">← 文库</a>
+					{group && <span> / {group}</span>}
+				</div>
 				<h1>{title}</h1>
 				<div class="doc-meta">
 					{meta.map((item, index) => (
@@ -188,18 +342,62 @@ const meta = [
 						</>
 					))}
 					{progress !== undefined && (
-						<span class="doc-progress">
+						<span class="progress">
 							<span class="sep">·</span>
 							<span class="bar"><span style={`width:${progress}%`}></span></span>
 							<span>{progress}%</span>
 						</span>
 					)}
+					{source && (
+						<>
+							<span class="sep">·</span>
+							<a href={source} target="_blank" rel="noopener">
+								{sourceLabel ?? '原文'} ↗
+							</a>
+						</>
+					)}
 				</div>
 			</div>
 
-			<Annotator docId={note.id} title={title}>
-				<Content />
-			</Annotator>
+			<div class:list={['layout', { 'layout--solo': notes.length === 0 }]}>
+				<article class="doc">
+					<Content />
+				</article>
+
+				{
+					notes.length > 0 && (
+						<aside class="notes">
+							<div class="notes-inner">
+								<div class="notes-head">
+									<h2>批注</h2>
+									<span>{notes.length} 条</span>
+								</div>
+								<ol>
+									{notes.map((annotation, index) => (
+										<li id={`note-${index + 1}`} data-color={annotation.color ?? 'yellow'}>
+											<a href={`#hl-${index + 1}`} title={`跳到正文第 ${index + 1} 处高亮`}>
+												<span class="note-quote">
+													<span class="num">{index + 1}</span>
+													{annotation.quote.length > 70
+														? `${annotation.quote.slice(0, 70)}…`
+														: annotation.quote}
+												</span>
+												<span class="note-body">
+													{annotation.note ?? '（暂无批注正文）'}
+												</span>
+											</a>
+										</li>
+									))}
+								</ol>
+								<p class="notes-tip">
+									这些批注随文档一起提交在仓库里，由 <code>rehypeAnnotate</code> 在构建时渲染 ——
+									页面是只读的。
+								</p>
+							</div>
+						</aside>
+					)
+				}
+			</div>
 		</main>
 		<Footer />
 	</body>
