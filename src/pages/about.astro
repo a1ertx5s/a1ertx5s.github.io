@@ -1,0 +1,48 @@
+---
+import Layout from '../layouts/BlogPost.astro';
+---
+
+<Layout
+	title="关于"
+	description="关于我，以及这个博客。"
+	pubDate={new Date('2026-10-10')}
+>
+	<p>
+		你好，我是 <strong>a1ertx5s</strong>。白天写代码，晚上读书，偶尔把两者混在一起写点东西。
+	</p>
+
+	<p>
+		这个站点没有评论区、没有统计脚本、没有推荐算法。它只做三件事：**发布文章**、**保存读书笔记**、
+		以及**让我自己愿意持续写下去**。
+	</p>
+
+	<h2>这里有什么</h2>
+
+	<ul>
+		<li>
+			<a href="/blog">博客</a> —— 技术实践、踩坑记录，以及一些还没想清楚的想法。
+		</li>
+		<li>
+			<a href="/notes">读书笔记</a> —— 导入的书籍与长文，可以直接在正文上划线、写批注。
+		</li>
+		<li>
+			<a href="/rss.xml">RSS</a> —— 如果你还在用阅读器，欢迎订阅。
+		</li>
+	</ul>
+
+	<h2>技术栈</h2>
+
+	<p>
+		<a href="https://astro.build" target="_blank" rel="noopener">Astro</a> 负责构建，
+		<a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a> 负责托管，
+		GitHub Actions 负责把 <code>main</code> 分支上的每一次 push 变成线上的一次部署。
+		源码即内容：所有文章和笔记都是仓库里的 Markdown 文件。
+	</p>
+
+	<h2>联系</h2>
+
+	<p>
+		最可靠的方式是 <a href="https://github.com/a1ertx5s" target="_blank" rel="noopener">GitHub</a>，
+		给我开个 Issue 或者 PR 都可以。
+	</p>
+</Layout>

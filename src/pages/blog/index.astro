@@ -1,0 +1,199 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import Header from '../../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+
+const posts = (await getCollection('blog')).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+
+// 收集全部标签（按使用次数倒序）
+const tagCount = new Map<string, number>();
+for (const post of posts) {
+	for (const tag of post.data.tags ?? []) {
+		tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+	}
+}
+const tags = [...tagCount.entries()].sort((a, b) => b[1] - a[1]);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title={`博客 · ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
+		<style>
+			main {
+				width: 860px;
+			}
+			.page-head {
+				margin-bottom: 2em;
+			}
+			.page-head h1 {
+				margin-bottom: 0.25em;
+			}
+			.page-head p {
+				color: rgb(var(--gray));
+				margin: 0;
+			}
+			.filters {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.5em;
+				margin-bottom: 2em;
+			}
+			.filter {
+				font-size: 0.85em;
+				text-decoration: none;
+				color: rgb(var(--gray-dark));
+				border: 1px solid rgb(var(--gray-light));
+				padding: 0.2em 0.8em;
+				border-radius: 999px;
+				background: #fff;
+				transition: 0.15s ease;
+			}
+			.filter:hover {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+			ul {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+				display: grid;
+				gap: 1.25em;
+			}
+			li a {
+				display: block;
+				text-decoration: none;
+				color: inherit;
+				padding: 1.1em 1.25em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 14px;
+				background: #fff;
+				transition: 0.18s ease;
+			}
+			li a:hover {
+				border-color: var(--accent);
+				box-shadow: var(--box-shadow);
+				transform: translateY(-2px);
+			}
+			.meta {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.75em;
+				align-items: center;
+				color: rgb(var(--gray));
+				font-size: 0.85em;
+			}
+			.tag {
+				color: var(--accent);
+			}
+			.title {
+				margin: 0.4em 0 0.3em;
+				font-size: 1.35em;
+				color: rgb(var(--black));
+			}
+			.desc {
+				margin: 0;
+				color: rgb(var(--gray));
+				font-size: 0.95em;
+			}
+			.empty {
+				color: rgb(var(--gray));
+			}
+			@media (max-width: 720px) {
+				main {
+					width: calc(100% - 2em);
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<section class="page-head">
+				<h1>博客</h1>
+				<p>技术实践、踩坑记录，以及一些还不成熟的想法。</p>
+			</section>
+
+			{
+				tags.length > 0 && (
+					<nav class="filters" aria-label="按标签筛选">
+						<a class="filter" href="/blog">全部</a>
+						{tags.map(([tag, count]) => (
+							<a class="filter" href={`/blog/?tag=${encodeURIComponent(tag)}`}>
+								#{tag} {count > 1 && <span>({count})</span>}
+							</a>
+						))}
+					</nav>
+				)
+			}
+
+			{
+				posts.length === 0 ? (
+					<p class="empty">还没有文章。</p>
+				) : (
+					<ul>
+						{posts.map((post) => (
+							<li data-tags={(post.data.tags ?? []).join(',')}>
+								<a href={`/blog/${post.id}/`}>
+									<div class="meta">
+										<FormattedDate date={post.data.pubDate} />
+										{(post.data.tags ?? []).map((tag) => (
+											<span class="tag">#{tag}</span>
+										))}
+									</div>
+									<h2 class="title">{post.data.title}</h2>
+									<p class="desc">{post.data.description}</p>
+								</a>
+							</li>
+						))}
+					</ul>
+				)
+			}
+		</main>
+		<Footer />
+		<script>
+			// 轻量的标签筛选：支持 ?tag=xxx 与点击标签即时过滤，纯静态、无依赖。
+			function applyFilter(tag) {
+				const items = document.querySelectorAll<HTMLLIElement>('ul li[data-tags]');
+				let visible = 0;
+				for (const li of items) {
+					const tags = (li.dataset.tags || '').split(',').filter(Boolean);
+					const show = !tag || tags.includes(tag);
+					li.style.display = show ? '' : 'none';
+					if (show) visible++;
+				}
+				document.querySelectorAll<HTMLAnchorElement>('a.filter').forEach((a) => {
+					const href = a.getAttribute('href') || '';
+					const current = new URLSearchParams(href.split('?')[1] ?? '').get('tag');
+					const isActive = (current ?? null) === (tag ?? null);
+					a.classList.toggle('is-active', isActive);
+					a.style.borderColor = isActive ? 'var(--accent)' : '';
+					a.style.color = isActive ? 'var(--accent)' : '';
+				});
+				const empty = document.querySelector<HTMLElement>('.empty');
+				if (empty) empty.style.display = visible === 0 ? '' : 'none';
+			}
+
+			function currentTag(): string | null {
+				return new URLSearchParams(location.search).get('tag');
+			}
+
+			document.addEventListener('click', (event) => {
+				const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a.filter');
+				if (!link) return;
+				event.preventDefault();
+				const href = link.getAttribute('href') || '/blog';
+				const tag = new URLSearchParams(href.split('?')[1] ?? '').get('tag');
+				history.replaceState(null, '', tag ? `${href}` : '/blog');
+				applyFilter(tag);
+			});
+
+			applyFilter(currentTag());
+		</script>
+	</body>
+</html>

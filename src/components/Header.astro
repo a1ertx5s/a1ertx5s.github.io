@@ -1,0 +1,133 @@
+---
+import { SITE_TITLE } from '../consts';
+import HeaderLink from './HeaderLink.astro';
+
+interface Props {
+	/** 首页 hero 内容；不传则渲染为紧凑的顶部导航栏 */
+	hero?: boolean;
+}
+const { hero = false } = Astro.props;
+---
+
+<header class:list={['site-header', { 'site-header--hero': hero }]}>
+	<nav>
+		<HeaderLink href="/" class="brand">
+			<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+				<path
+					fill="currentColor"
+					d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"></path>
+			</svg>
+			<span>{SITE_TITLE}</span>
+		</HeaderLink>
+
+		<div class="internal-links">
+			<HeaderLink href="/">首页</HeaderLink>
+			<HeaderLink href="/blog">博客</HeaderLink>
+			<HeaderLink href="/notes">读书笔记</HeaderLink>
+			<HeaderLink href="/about">关于</HeaderLink>
+		</div>
+
+		<div class="social-links">
+			<a href="/rss.xml" title="RSS 订阅" aria-label="RSS 订阅">
+				<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+					<path
+						fill="currentColor"
+						d="M2.002 2.725a.75.75 0 0 1 .797-.716 10.5 10.5 0 0 1 8.333 8.333.75.75 0 1 1-1.502.09 9 9 0 0 0-7.833-7.833.75.75 0 0 1-.795-.716Zm2.44 2.44a.75.75 0 0 1 .717.798 6 6 0 0 0 4.996 4.996.75.75 0 1 1-.091 1.502 7.5 7.5 0 0 1-6.304-6.305.75.75 0 0 1 .796-.717Zm1.237 5.516a3.5 3.5 0 1 1-4.946-4.946.75.75 0 0 1 1.06 1.06 2 2 0 0 0 2.826 2.827.75.75 0 1 1 1.06 1.06Zm.708 1.414a.75.75 0 1 1 .001-1.06 1.5 1.5 0 0 1 0 2.121.75.75 0 0 1-.001-1.06Z"
+					></path>
+				</svg>
+			</a>
+			<a href="https://github.com/a1ertx5s" target="_blank" rel="noopener" title="GitHub">
+				<span class="sr-only">GitHub</span>
+				<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
+					<path
+						fill="currentColor"
+						d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23 1.87.87 2.33.66.07.52.28.87.51 1.07-1.78.2-3.64.2-3.95 0-.87.31-1.59.82-2.15.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.28.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.13 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+					></path>
+				</svg>
+			</a>
+		</div>
+	</nav>
+</header>
+
+<style>
+	.site-header {
+		margin: 0;
+		padding: 0 1em;
+		background: rgba(255, 255, 255, 0.85);
+		backdrop-filter: saturate(180%) blur(8px);
+		box-shadow: 0 1px 0 rgba(var(--gray-light), 1);
+		position: sticky;
+		top: 0;
+		z-index: 20;
+	}
+	.site-header--hero {
+		box-shadow: none;
+		background: transparent;
+		backdrop-filter: none;
+		position: static;
+	}
+	nav {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1em;
+		max-width: 960px;
+		margin: 0 auto;
+	}
+	.brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5em;
+		color: rgb(var(--black));
+		text-decoration: none;
+		font-weight: 700;
+		white-space: nowrap;
+	}
+	.brand svg {
+		color: var(--accent);
+	}
+	nav a {
+		padding: 1em 0.5em;
+		color: rgb(var(--gray-dark));
+		border-bottom: 3px solid transparent;
+		text-decoration: none;
+		transition:
+			color 0.15s ease,
+			border-color 0.15s ease;
+	}
+	nav a:hover {
+		color: var(--accent);
+	}
+	nav a.active {
+		border-bottom-color: var(--accent);
+		color: rgb(var(--black));
+	}
+	.internal-links {
+		display: flex;
+		flex-wrap: wrap;
+	}
+	.social-links,
+	.social-links a {
+		display: flex;
+		align-items: center;
+	}
+	.social-links a {
+		padding: 1em 0.35em;
+	}
+	@media (max-width: 720px) {
+		nav {
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 0;
+		}
+		.brand {
+			width: 100%;
+			justify-content: center;
+			padding-top: 0.9em;
+		}
+		nav a {
+			padding: 0.7em 0.45em;
+			font-size: 0.95em;
+		}
+	}
+</style>

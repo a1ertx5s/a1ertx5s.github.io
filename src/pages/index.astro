@@ -1,0 +1,255 @@
+---
+import { getCollection } from 'astro:content';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import Header from '../components/Header.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+
+const posts = (await getCollection('blog'))
+	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+	.slice(0, 5);
+
+const notes = (await getCollection('notes'))
+	.filter((n) => !n.data.draft)
+	.sort((a, b) => (b.data.importedDate?.getTime() ?? 0) - (a.data.importedDate?.getTime() ?? 0))
+	.slice(0, 4);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+	</head>
+	<body>
+		<Header hero />
+		<main>
+			<section class="hero">
+				<p class="hero-kicker">你好，我是 a1ertx5s</p>
+				<h1>写代码，<br />也写读书笔记。</h1>
+				<p class="hero-sub">
+					这里是我的个人博客：记录技术实践、阅读摘录与一些还不成熟的想法。
+					所有文章都以 Markdown 写成，托管在 GitHub Pages 上。
+				</p>
+				<div class="hero-actions">
+					<a class="btn btn-primary" href="/blog">阅读博客</a>
+					<a class="btn btn-ghost" href="/notes">查看读书笔记</a>
+				</div>
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>最新文章</h2>
+					<a href="/blog">全部 →</a>
+				</div>
+				{
+					posts.length === 0 ? (
+						<p class="empty">还没有文章。在 <code>src/content/blog/</code> 里新建一个 .md 文件即可。</p>
+					) : (
+						<ul class="post-list">
+							{posts.map((post) => (
+								<li>
+									<a href={`/blog/${post.id}/`}>
+										<div class="post-meta">
+											<FormattedDate date={post.data.pubDate} />
+											{post.data.tags?.map((tag) => (
+												<span class="tag">#{tag}</span>
+											))}
+										</div>
+										<h3>{post.data.title}</h3>
+										<p>{post.data.description}</p>
+									</a>
+								</li>
+							))}
+						</ul>
+					)
+				}
+			</section>
+
+			<section class="section">
+				<div class="section-head">
+					<h2>读书笔记</h2>
+					<a href="/notes">全部 →</a>
+				</div>
+				{
+					notes.length === 0 ? (
+						<p class="empty">还没有导入任何文档。</p>
+					) : (
+						<ul class="note-list">
+							{notes.map((note) => (
+								<li>
+									<a href={`/notes/${note.id}/`}>
+										<span class="note-kind">{note.data.kind}</span>
+										<span class="note-title">{note.data.title}</span>
+										{note.data.author && <span class="note-author">{note.data.author}</span>}
+									</a>
+								</li>
+							))}
+						</ul>
+					)
+				}
+			</section>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	main {
+		width: 900px;
+	}
+	.hero {
+		padding: 3em 0 2em;
+	}
+	.hero-kicker {
+		color: var(--accent);
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		margin-bottom: 0.5em;
+	}
+	.hero h1 {
+		font-size: clamp(2.2rem, 6vw, 3.6rem);
+		line-height: 1.15;
+		margin: 0 0 0.4em;
+	}
+	.hero-sub {
+		max-width: 40em;
+		color: rgb(var(--gray));
+		font-size: 1.1em;
+	}
+	.hero-actions {
+		display: flex;
+		gap: 0.75em;
+		flex-wrap: wrap;
+		margin-top: 1.5em;
+	}
+	.btn {
+		display: inline-block;
+		padding: 0.6em 1.3em;
+		border-radius: 999px;
+		text-decoration: none;
+		font-weight: 600;
+		transition: 0.18s ease;
+	}
+	.btn-primary {
+		background: var(--accent);
+		color: #fff;
+	}
+	.btn-primary:hover {
+		background: var(--accent-dark);
+	}
+	.btn-ghost {
+		border: 1px solid rgb(var(--gray-light));
+		color: rgb(var(--gray-dark));
+		background: #fff;
+	}
+	.btn-ghost:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+	.section {
+		margin-top: 3em;
+	}
+	.section-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		border-bottom: 2px solid rgb(var(--gray-light));
+		padding-bottom: 0.5em;
+		margin-bottom: 1.25em;
+	}
+	.section-head h2 {
+		margin: 0;
+		font-size: 1.5em;
+	}
+	.section-head a {
+		text-decoration: none;
+		color: rgb(var(--gray));
+		font-size: 0.9em;
+	}
+	.section-head a:hover {
+		color: var(--accent);
+	}
+	.empty {
+		color: rgb(var(--gray));
+	}
+	.post-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 1.5em;
+	}
+	.post-list a {
+		text-decoration: none;
+		color: inherit;
+		display: block;
+		padding: 1em;
+		border-radius: 12px;
+		transition: 0.18s ease;
+	}
+	.post-list a:hover {
+		background: rgba(255, 255, 255, 0.7);
+		box-shadow: var(--box-shadow);
+		transform: translateY(-2px);
+	}
+	.post-meta {
+		display: flex;
+		gap: 0.75em;
+		align-items: center;
+		color: rgb(var(--gray));
+		font-size: 0.85em;
+	}
+	.tag {
+		color: var(--accent);
+	}
+	.post-list h3 {
+		margin: 0.35em 0 0.25em;
+		font-size: 1.3em;
+	}
+	.post-list p {
+		margin: 0;
+		color: rgb(var(--gray));
+		font-size: 0.95em;
+	}
+	.note-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+		gap: 1em;
+	}
+	.note-list a {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3em;
+		text-decoration: none;
+		padding: 1em;
+		border: 1px solid rgb(var(--gray-light));
+		border-radius: 12px;
+		background: #fff;
+		transition: 0.18s ease;
+		height: 100%;
+	}
+	.note-list a:hover {
+		border-color: var(--accent);
+		box-shadow: var(--box-shadow);
+		transform: translateY(-2px);
+	}
+	.note-kind {
+		font-size: 0.72em;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--accent);
+		font-weight: 700;
+	}
+	.note-title {
+		font-weight: 700;
+		color: rgb(var(--black));
+	}
+	.note-author {
+		color: rgb(var(--gray));
+		font-size: 0.85em;
+	}
+</style>

@@ -1,0 +1,56 @@
+---
+import { SITE_TITLE } from '../consts';
+
+const today = new Date();
+---
+
+<footer>
+	<div class="footer-brand">{SITE_TITLE}</div>
+	<div class="footer-links">
+		<a href="/blog">博客</a>
+		<a href="/notes">读书笔记</a>
+		<a href="/about">关于</a>
+		<a href="/rss.xml">RSS</a>
+	</div>
+	<div class="copyright">
+		&copy; {today.getFullYear()} a1ertx5s · 用 <a href="https://astro.build" target="_blank" rel="noopener">Astro</a> 构建 ·
+		托管于 <a href="https://pages.github.com" target="_blank" rel="noopener">GitHub Pages</a>
+	</div>
+</footer>
+<style>
+	footer {
+		padding: 3em 1em 5em 1em;
+		background: linear-gradient(var(--gray-gradient)) no-repeat;
+		color: rgb(var(--gray));
+		text-align: center;
+	}
+	.footer-brand {
+		font-weight: 700;
+		color: rgb(var(--gray-dark));
+		margin-bottom: 0.75em;
+	}
+	.footer-links {
+		display: flex;
+		justify-content: center;
+		gap: 1.5em;
+		margin-bottom: 1.25em;
+		flex-wrap: wrap;
+	}
+	.footer-links a {
+		color: rgb(var(--gray));
+		text-decoration: none;
+	}
+	.footer-links a:hover {
+		color: var(--accent);
+	}
+	.copyright {
+		font-size: 0.85em;
+		line-height: 1.8;
+	}
+	.copyright a {
+		color: rgb(var(--gray));
+	}
+	.copyright a:hover {
+		color: var(--accent);
+	}
+</style>
