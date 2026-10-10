@@ -1,0 +1,211 @@
+---
+import { getCollection } from 'astro:content';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import BaseHead from '../../components/BaseHead.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import { SITE_DESCRIPTION, SITE_TITLE } from '../../consts';
+
+const notes = (await getCollection('notes')).sort(
+	(a, b) => (b.data.importedDate?.getTime() ?? 0) - (a.data.importedDate?.getTime() ?? 0),
+);
+
+const KIND_LABEL: Record<string, string> = {
+	book: '书籍',
+	article: '文章',
+	paper: '论文',
+	document: '文档',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+	reading: '在读',
+	done: '已读完',
+	paused: '搁置',
+};
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title={`读书笔记 · ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
+		<style>
+			main {
+				width: 900px;
+			}
+			.page-head {
+				margin-bottom: 2.5em;
+			}
+			.page-head h1 {
+				margin-bottom: 0.3em;
+			}
+			.page-head p {
+				color: rgb(var(--gray));
+				margin: 0;
+				max-width: 44em;
+			}
+			.head-actions {
+				margin-top: 1.2em;
+				display: flex;
+				gap: 0.6em;
+				flex-wrap: wrap;
+			}
+			.btn {
+				display: inline-block;
+				padding: 0.5em 1.1em;
+				border-radius: 999px;
+				text-decoration: none;
+				font-weight: 600;
+				font-size: 0.92em;
+				transition: 0.18s ease;
+			}
+			.btn-primary {
+				background: var(--accent);
+				color: #fff;
+			}
+			.btn-primary:hover {
+				background: var(--accent-dark);
+			}
+			.btn-ghost {
+				border: 1px solid rgb(var(--gray-light));
+				color: rgb(var(--gray-dark));
+				background: #fff;
+			}
+			.btn-ghost:hover {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+			ul {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+				display: grid;
+				gap: 1.1em;
+			}
+			li a {
+				display: block;
+				text-decoration: none;
+				color: inherit;
+				padding: 1.2em 1.35em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 14px;
+				background: #fff;
+				transition: 0.18s ease;
+			}
+			li a:hover {
+				border-color: var(--accent);
+				box-shadow: var(--box-shadow);
+				transform: translateY(-2px);
+			}
+			.row {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.7em;
+				align-items: center;
+				font-size: 0.82em;
+				color: rgb(var(--gray));
+			}
+			.pill {
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 999px;
+				padding: 0.1em 0.7em;
+				font-size: 0.95em;
+			}
+			.pill--accent {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+			h3 {
+				margin: 0.45em 0 0.3em;
+				font-size: 1.3em;
+				color: rgb(var(--black));
+			}
+			.author {
+				margin: 0 0 0.5em;
+				color: rgb(var(--gray));
+				font-size: 0.9em;
+			}
+			.progress {
+				margin-top: 0.8em;
+				height: 4px;
+				border-radius: 999px;
+				background: rgb(var(--gray-light));
+				overflow: hidden;
+			}
+			.progress span {
+				display: block;
+				height: 100%;
+				background: var(--accent);
+				border-radius: 999px;
+			}
+			.empty {
+				color: rgb(var(--gray));
+				border: 1px dashed rgb(var(--gray-light));
+				border-radius: 14px;
+				padding: 2em;
+				text-align: center;
+			}
+			code {
+				font-size: 0.9em;
+			}
+			@media (max-width: 720px) {
+				main {
+					width: calc(100% - 2em);
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<section class="page-head">
+				<h1>读书笔记</h1>
+				<p>
+					这里放我导入的书籍与长文。阅读时可以直接在正文上划线、写批注 —— 批注保存在浏览器本地，
+					也可以导出成 JSON 带走。
+				</p>
+				<div class="head-actions">
+					<a class="btn btn-primary" href="/notes/import">导入一份文档 →</a>
+					<a class="btn btn-ghost" href="/blog">返回博客</a>
+				</div>
+			</section>
+
+			{
+				notes.length === 0 ? (
+					<div class="empty">
+						<p>书架上还没有文档。</p>
+						<p>
+							把 Markdown 放进 <code>src/content/notes/</code> 并推送即可， 或者用
+							<a href="/notes/import">导入页面</a>先试读一段。
+						</p>
+					</div>
+				) : (
+					<ul>
+						{notes.map((note) => (
+							<li>
+								<a href={`/notes/${note.id}/`}>
+									<div class="row">
+										<span class="pill pill--accent">
+											{KIND_LABEL[note.data.kind] ?? note.data.kind}
+										</span>
+										{note.data.status && (
+											<span class="pill">{STATUS_LABEL[note.data.status] ?? note.data.status}</span>
+										)}
+										{note.data.importedDate && <FormattedDate date={note.data.importedDate} />}
+									</div>
+									<h3>{note.data.title}</h3>
+									{note.data.author && <p class="author">{note.data.author}</p>}
+									{note.data.progress !== undefined && (
+										<div class="progress" title={`阅读进度 ${note.data.progress}%`}>
+											<span style={`width:${note.data.progress}%`}></span>
+										</div>
+									)}
+								</a>
+							</li>
+						))}
+					</ul>
+				)
+			}
+		</main>
+		<Footer />
+	</body>
+</html>

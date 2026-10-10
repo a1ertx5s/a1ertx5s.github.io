@@ -1,0 +1,487 @@
+---
+import Annotator from '../../components/Annotator.astro';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title={`导入文档 · 读书笔记 · ${SITE_TITLE}`} description="导入 Markdown / 纯文本文档，立即开始划线批注。" />
+		<style>
+			main {
+				width: 900px;
+			}
+			h1 {
+				margin-bottom: 0.3em;
+			}
+			.lead {
+				color: rgb(var(--gray));
+				max-width: 44em;
+			}
+			.importer {
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 16px;
+				background: #fff;
+				padding: 1.4em;
+				margin: 1.8em 0 2.5em;
+			}
+			.field {
+				margin-bottom: 1em;
+			}
+			.field label {
+				display: block;
+				font-weight: 600;
+				font-size: 0.9em;
+				margin-bottom: 0.35em;
+			}
+			.field input[type='text'],
+			.field textarea {
+				width: 100%;
+				box-sizing: border-box;
+				font: inherit;
+				font-size: 0.92em;
+				padding: 0.6em 0.75em;
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 10px;
+				color: rgb(var(--black));
+			}
+			.field textarea {
+				min-height: 190px;
+				line-height: 1.7;
+				resize: vertical;
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.85em;
+			}
+			.field input:focus,
+			.field textarea:focus {
+				outline: 2px solid var(--accent);
+				outline-offset: -1px;
+			}
+			.actions {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.6em;
+				align-items: center;
+			}
+			.btn {
+				font: inherit;
+				font-size: 0.92em;
+				font-weight: 600;
+				padding: 0.55em 1.2em;
+				border-radius: 999px;
+				border: 1px solid transparent;
+				cursor: pointer;
+				text-decoration: none;
+				display: inline-block;
+				transition: 0.18s ease;
+			}
+			.btn-primary {
+				background: var(--accent);
+				color: #fff;
+			}
+			.btn-primary:hover {
+				background: var(--accent-dark);
+			}
+			.btn-ghost {
+				border-color: rgb(var(--gray-light));
+				background: #fff;
+				color: rgb(var(--gray-dark));
+			}
+			.btn-ghost:hover {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+			.dropzone {
+				border: 1.5px dashed rgb(var(--gray-light));
+				border-radius: 12px;
+				padding: 1.2em;
+				text-align: center;
+				color: rgb(var(--gray));
+				font-size: 0.88em;
+				margin-bottom: 1em;
+				transition: 0.18s ease;
+			}
+			.dropzone.is-over {
+				border-color: var(--accent);
+				background: rgba(35, 55, 255, 0.04);
+				color: var(--accent);
+			}
+			.hint {
+				font-size: 0.84em;
+				color: rgb(var(--gray));
+				line-height: 1.8;
+			}
+			.repo-path {
+				background: rgb(var(--gray-light));
+				border-radius: 6px;
+				padding: 0.1em 0.4em;
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.88em;
+			}
+			#reader {
+				display: none;
+			}
+			#reader.is-active {
+				display: block;
+			}
+			#importer-block.is-hidden {
+				display: none;
+			}
+			.reader-bar {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.6em;
+				align-items: center;
+				justify-content: space-between;
+				border-top: 1px solid rgb(var(--gray-light));
+				padding-top: 1em;
+				margin-bottom: 1.5em;
+			}
+			:global(.annotator__doc) {
+				font-size: 1.02em;
+				line-height: 1.95;
+			}
+			:global(.annotator-mark) {
+				background: color-mix(in srgb, var(--hl-yellow, #f5c518) 42%, transparent);
+				border-bottom: 2px solid color-mix(in srgb, var(--hl-yellow, #f5c518) 85%, transparent);
+				cursor: pointer;
+			}
+			:global(.annotator-mark[data-color='green']) {
+				background: color-mix(in srgb, #4caf50 38%, transparent);
+				border-bottom-color: #4caf50;
+			}
+			:global(.annotator-mark[data-color='blue']) {
+				background: color-mix(in srgb, #2196f3 32%, transparent);
+				border-bottom-color: #2196f3;
+			}
+			:global(.annotator-mark[data-color='pink']) {
+				background: color-mix(in srgb, #ec407a 32%, transparent);
+				border-bottom-color: #ec407a;
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>导入文档</h1>
+			<p class="lead">
+				把你的 Markdown / 纯文本贴进来（或直接拖一个文件到下面的框里），就能立刻开始划线批注。
+				这里是纯静态站点，导入的文档只存在于你的浏览器里；想长期保留，用「导出 Markdown」把
+				文档和批注存回仓库即可。
+			</p>
+
+			<div id="importer-block">
+				<div class="importer">
+					<div class="dropzone" id="dropzone">
+						把 <strong>.md</strong> / <strong>.txt</strong> 文件拖到这里，或
+						<label class="btn btn-ghost" style="padding:0.3em 0.9em;font-size:0.95em;">
+							选择文件
+							<input type="file" id="file" accept=".md,.markdown,.txt,text/plain,text/markdown" hidden />
+						</label>
+					</div>
+
+					<div class="field">
+						<label for="title">文档标题</label>
+						<input type="text" id="title" placeholder="例如：论语·学而 选读" />
+					</div>
+
+					<div class="field">
+						<label for="source">正文（Markdown 或纯文本）</label>
+						<textarea id="source" placeholder="# 第一章&#10;&#10;在这里粘贴你的文本……"></textarea>
+					</div>
+
+					<div class="actions">
+						<button type="button" class="btn btn-primary" id="start">开始阅读并批注</button>
+						<button type="button" class="btn btn-ghost" id="demo">填入示例文本</button>
+					</div>
+				</div>
+
+				<p class="hint">
+					想让它成为一个永久页面？把文档保存为 Markdown，放进仓库的
+					<span class="repo-path">src/content/notes/你的文件名.md</span>，填上 title / author / kind
+					这几个字段，推送后就会出现在 <a href="/notes">读书笔记</a> 列表里。
+				</p>
+			</div>
+
+			<div id="reader">
+				<div class="reader-bar">
+					<strong id="reader-title"></strong>
+					<button type="button" class="btn btn-ghost" id="back">← 换一份文档</button>
+				</div>
+
+				<Annotator docId="imported-draft" title="导入的文档" loadRemote={false}>
+					<div id="reader-content"></div>
+				</Annotator>
+			</div>
+		</main>
+		<Footer />
+
+		<script>
+			/* ---------- 极简 Markdown 渲染（够读书用：标题 / 列表 / 引用 / 代码 / 强调 / 链接） ---------- */
+			function escapeHtml(value: string): string {
+				return value.replace(/[&<>"']/g, (char) => {
+					const map: Record<string, string> = {
+						'&': '&amp;',
+						'<': '&lt;',
+						'>': '&gt;',
+						'"': '&quot;',
+						"'": '&#39;',
+					};
+					return map[char] ?? char;
+				});
+			}
+
+			function inline(text: string): string {
+				return escapeHtml(text)
+					.replace(/`([^`]+)`/g, '<code>$1</code>')
+					.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+					.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+					.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+			}
+
+			function renderMarkdown(source: string): string {
+				const lines = source.replace(/\r\n?/g, '\n').split('\n');
+				const out: string[] = [];
+				let paragraph: string[] = [];
+				let listType: 'ul' | 'ol' | null = null;
+				let listItems: string[] = [];
+
+				const flushParagraph = () => {
+					if (paragraph.length) {
+						out.push(`<p>${inline(paragraph.join(' '))}</p>`);
+						paragraph = [];
+					}
+				};
+				const flushList = () => {
+					if (listType) {
+						out.push(
+							`<${listType}>${listItems.map((item) => `<li>${inline(item)}</li>`).join('')}</${listType}>`,
+						);
+						listType = null;
+						listItems = [];
+					}
+				};
+
+				let i = 0;
+				while (i < lines.length) {
+					const line = lines[i];
+
+					if (/^\s*```/.test(line)) {
+						flushParagraph();
+						flushList();
+						const buffer: string[] = [];
+						i++;
+						while (i < lines.length && !/^\s*```/.test(lines[i])) {
+							buffer.push(lines[i]);
+							i++;
+						}
+						i++;
+						out.push(`<pre><code>${escapeHtml(buffer.join('\n'))}</code></pre>`);
+						continue;
+					}
+
+					const heading = line.match(/^(#{1,6})\s+(.*)$/);
+					if (heading) {
+						flushParagraph();
+						flushList();
+						const level = Math.min(6, heading[1].length + 1);
+						out.push(`<h${level}>${inline(heading[2])}</h${level}>`);
+						i++;
+						continue;
+					}
+
+					if (/^\s*([-*_])\1{2,}\s*$/.test(line)) {
+						flushParagraph();
+						flushList();
+						out.push('<hr />');
+						i++;
+						continue;
+					}
+
+					if (/^>\s?/.test(line)) {
+						flushParagraph();
+						flushList();
+						const buffer: string[] = [];
+						while (i < lines.length && /^>\s?/.test(lines[i])) {
+							buffer.push(lines[i].replace(/^>\s?/, ''));
+							i++;
+						}
+						out.push(`<blockquote><p>${inline(buffer.join(' '))}</p></blockquote>`);
+						continue;
+					}
+
+					const unordered = line.match(/^\s*[-*+]\s+(.*)$/);
+					if (unordered) {
+						flushParagraph();
+						if (listType !== 'ul') {
+							flushList();
+							listType = 'ul';
+						}
+						listItems.push(unordered[1]);
+						i++;
+						continue;
+					}
+
+					const ordered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+					if (ordered) {
+						flushParagraph();
+						if (listType !== 'ol') {
+							flushList();
+							listType = 'ol';
+						}
+						listItems.push(ordered[1]);
+						i++;
+						continue;
+					}
+
+					if (!line.trim()) {
+						flushParagraph();
+						flushList();
+						i++;
+						continue;
+					}
+
+					flushList();
+					paragraph.push(line.trim());
+					i++;
+				}
+
+				flushParagraph();
+				flushList();
+				return out.join('\n');
+			}
+
+			/* ---------- 页面交互 ---------- */
+			const DEMO = `# 论读书
+
+读书足以怡情，足以傅彩，足以长才。其怡情也，最见于独处幽居之时；其傅彩也，最见于高谈阔论之中；其长才也，最见于处世判事之际。
+
+练达之士虽能分别处理细事或一一判别枝节，然纵观统筹、全局策划，则舍好学深思者莫属。
+
+读书费时过多易惰，文采藻饰太盛则矫，全凭条文断事乃学究故态。
+
+读书补天然之不足，经验又补读书之不足，盖天生才干犹如自然花草，读书然后知如何修剪移接。
+
+> 有一技之长者鄙读书，无知者羡读书，唯明智之士用读书。
+
+读书时不可存心诘难作者，不可尽信书上所言，亦不可只为寻章摘句，而应推敲细思。
+
+书有可浅尝者，有可吞食者，少数则须咀嚼消化。换言之，有只须读其部分者，有只须大体涉猎者，少数则须全读，读时须全神贯注，孜孜不倦。
+
+书亦可请人代读，取其所作摘要，但只限题材较次或价值不高者，否则书经提炼犹如水经蒸馏，淡而无味矣。`;
+
+			function boot() {
+				const importerBlock = document.getElementById('importer-block');
+				const reader = document.getElementById('reader');
+				const readerTitle = document.getElementById('reader-title');
+				const contentEl = document.getElementById('reader-content');
+				const titleInput = document.getElementById('title') as HTMLInputElement | null;
+				const sourceInput = document.getElementById('source') as HTMLTextAreaElement | null;
+				const dropzone = document.getElementById('dropzone');
+				const fileInput = document.getElementById('file') as HTMLInputElement | null;
+
+				if (!importerBlock || !reader || !contentEl || !titleInput || !sourceInput) return;
+				if (importerBlock.dataset.bound === '1') return;
+				importerBlock.dataset.bound = '1';
+
+				function slugify(value: string): string {
+					const base = value
+						.trim()
+						.replace(/\s+/g, '-')
+						.replace(/[^\w\u4e00-\u9fa5-]+/g, '')
+						.replace(/-+/g, '-')
+						.replace(/^-+|-+$/g, '');
+					return base || `imported-${Date.now()}`;
+				}
+
+				function startReading() {
+					const raw = sourceInput!.value.trim();
+					if (!raw) {
+						window.alert('先粘贴一些文本，或者拖一个文件进来。');
+						return;
+					}
+					const title = titleInput!.value.trim() || '未命名文档';
+					contentEl!.innerHTML = renderMarkdown(raw);
+					readerTitle!.textContent = title;
+					importerBlock!.classList.add('is-hidden');
+					reader!.classList.add('is-active');
+
+					const apply = () => {
+						const controller = (
+							window as unknown as {
+								__annotator?: { setContent: (html: string, docId?: string, title?: string) => void };
+							}
+						).__annotator;
+						if (controller) {
+							controller.setContent(contentEl!.innerHTML, slugify(title), title);
+						}
+						window.scrollTo({ top: 0, behavior: 'smooth' });
+					};
+
+					// 等批注引擎就绪后再灌入内容
+					if ((window as unknown as { __annotator?: unknown }).__annotator) {
+						apply();
+					} else {
+						document.addEventListener('annotator:ready', apply, { once: true });
+						window.setTimeout(() => {
+							if ((window as unknown as { __annotator?: unknown }).__annotator) apply();
+						}, 400);
+					}
+				}
+
+				document.getElementById('start')?.addEventListener('click', startReading);
+				document.getElementById('demo')?.addEventListener('click', () => {
+					titleInput!.value = '论读书 · 培根';
+					sourceInput!.value = DEMO;
+				});
+				document.getElementById('back')?.addEventListener('click', () => {
+					reader!.classList.remove('is-active');
+					importerBlock!.classList.remove('is-hidden');
+					window.scrollTo({ top: 0, behavior: 'smooth' });
+				});
+
+				fileInput?.addEventListener('change', () => {
+					const file = fileInput.files?.[0];
+					if (file) void readFile(file);
+				});
+
+				async function readFile(file: File) {
+					const text = await file.text();
+					sourceInput!.value = text;
+					if (!titleInput!.value.trim()) {
+						titleInput!.value = file.name.replace(/\.(md|markdown|txt)$/i, '');
+					}
+				}
+
+				if (dropzone) {
+					['dragenter', 'dragover'].forEach((type) =>
+						dropzone.addEventListener(type, (event) => {
+							event.preventDefault();
+							dropzone.classList.add('is-over');
+						}),
+					);
+					['dragleave', 'drop'].forEach((type) =>
+						dropzone.addEventListener(type, (event) => {
+							event.preventDefault();
+							dropzone.classList.remove('is-over');
+						}),
+					);
+					dropzone.addEventListener('drop', (event) => {
+						const file = (event as DragEvent).dataTransfer?.files?.[0];
+						if (file) void readFile(file);
+					});
+				}
+			}
+
+			document.addEventListener('astro:page-load', boot);
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', boot);
+			} else {
+				boot();
+			}
+		</script>
+	</body>
+</html>

@@ -1,0 +1,206 @@
+---
+import { type CollectionEntry, getCollection, render } from 'astro:content';
+import Annotator from '../../components/Annotator.astro';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+
+export async function getStaticPaths() {
+	const notes = await getCollection('notes');
+	return notes.map((note) => ({
+		params: { slug: note.id },
+		props: { note },
+	}));
+}
+
+interface Props {
+	note: CollectionEntry<'notes'>;
+}
+
+const { note } = Astro.props;
+const { Content } = await render(note);
+const { title, author, source, kind, status, progress, importedDate } = note.data;
+
+const KIND_LABEL: Record<string, string> = {
+	book: '书籍',
+	article: '文章',
+	paper: '论文',
+	document: '文档',
+};
+const STATUS_LABEL: Record<string, string> = {
+	reading: '在读',
+	done: '已读完',
+	paused: '搁置',
+};
+
+const meta = [
+	author,
+	source,
+	kind ? (KIND_LABEL[kind] ?? kind) : null,
+	status ? (STATUS_LABEL[status] ?? status) : null,
+	importedDate ? `导入于 ${importedDate.toLocaleDateString('zh-CN')}` : null,
+].filter(Boolean) as string[];
+---
+
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<BaseHead title={`${title} · 读书笔记 · ${SITE_TITLE}`} description={`${title} 的阅读批注`} />
+		<style>
+			main {
+				width: 100%;
+				max-width: 100%;
+				padding: 2.5em 1.5em 4em;
+			}
+			.doc-head {
+				max-width: 1180px;
+				margin: 0 auto 2em;
+				padding-bottom: 1.4em;
+				border-bottom: 1px solid rgb(var(--gray-light));
+			}
+			.breadcrumb {
+				font-size: 0.85em;
+				color: rgb(var(--gray));
+				margin-bottom: 0.8em;
+			}
+			.breadcrumb a {
+				text-decoration: none;
+				color: rgb(var(--gray));
+			}
+			.breadcrumb a:hover {
+				color: var(--accent);
+			}
+			.doc-head h1 {
+				margin: 0 0 0.4em;
+				font-size: clamp(1.7rem, 3.6vw, 2.5rem);
+				line-height: 1.25;
+			}
+			.doc-meta {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.6em 1.1em;
+				align-items: center;
+				color: rgb(var(--gray));
+				font-size: 0.88em;
+			}
+			.doc-meta .sep {
+				color: rgb(var(--gray-light));
+			}
+			.doc-progress {
+				display: flex;
+				align-items: center;
+				gap: 0.5em;
+			}
+			.doc-progress .bar {
+				width: 120px;
+				height: 4px;
+				border-radius: 999px;
+				background: rgb(var(--gray-light));
+				overflow: hidden;
+			}
+			.doc-progress .bar span {
+				display: block;
+				height: 100%;
+				background: var(--accent);
+			}
+			/* 正文排版：批注容器内，字号略小一些，行距放宽便于划线 */
+			:global(.annotator__doc) {
+				font-size: 1.02em;
+				line-height: 1.95;
+				color: rgb(var(--gray-dark));
+			}
+			:global(.annotator__doc > :first-child) {
+				margin-top: 0;
+			}
+			:global(.annotator__doc h2) {
+				font-size: 1.5em;
+				margin: 1.9em 0 0.7em;
+				padding-top: 0.6em;
+				border-top: 1px solid rgb(var(--gray-light));
+			}
+			:global(.annotator__doc h3) {
+				font-size: 1.18em;
+				margin: 1.5em 0 0.5em;
+			}
+			:global(.annotator__doc p) {
+				margin: 0 0 1.15em;
+			}
+			:global(.annotator__doc blockquote) {
+				font-size: 1em;
+				color: rgb(var(--gray));
+				background: rgba(var(--gray-light), 35%);
+				border-radius: 0 10px 10px 0;
+				padding: 0.8em 1.1em;
+				margin: 1.4em 0;
+			}
+			/* ---------- 划线样式 ---------- */
+			:global(.annotator-mark) {
+				background: var(--hl-yellow, #f5c518);
+				background: color-mix(in srgb, var(--hl-yellow, #f5c518) 42%, transparent);
+				border-bottom: 2px solid color-mix(in srgb, var(--hl-yellow, #f5c518) 85%, transparent);
+				color: inherit;
+				padding: 0.05em 0;
+				border-radius: 2px;
+				cursor: pointer;
+				transition: background 0.15s ease;
+			}
+			:global(.annotator-mark:hover) {
+				background: color-mix(in srgb, var(--hl-yellow, #f5c518) 62%, transparent);
+			}
+			:global(.annotator-mark[data-color='green']) {
+				background: color-mix(in srgb, #4caf50 38%, transparent);
+				border-bottom-color: #4caf50;
+			}
+			:global(.annotator-mark[data-color='blue']) {
+				background: color-mix(in srgb, #2196f3 32%, transparent);
+				border-bottom-color: #2196f3;
+			}
+			:global(.annotator-mark[data-color='pink']) {
+				background: color-mix(in srgb, #ec407a 32%, transparent);
+				border-bottom-color: #ec407a;
+			}
+			:global(.annotator-mark.is-flashing) {
+				animation: flash 0.6s ease 2;
+			}
+			@keyframes flash {
+				0%,
+				100% {
+					background: color-mix(in srgb, var(--hl-yellow, #f5c518) 42%, transparent);
+				}
+				50% {
+					background: color-mix(in srgb, var(--hl-yellow, #f5c518) 90%, transparent);
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="doc-head">
+				<div class="breadcrumb"><a href="/notes">← 读书笔记</a></div>
+				<h1>{title}</h1>
+				<div class="doc-meta">
+					{meta.map((item, index) => (
+						<>
+							{index > 0 && <span class="sep">·</span>}
+							<span>{item}</span>
+						</>
+					))}
+					{progress !== undefined && (
+						<span class="doc-progress">
+							<span class="sep">·</span>
+							<span class="bar"><span style={`width:${progress}%`}></span></span>
+							<span>{progress}%</span>
+						</span>
+					)}
+				</div>
+			</div>
+
+			<Annotator docId={note.id} title={title}>
+				<Content />
+			</Annotator>
+		</main>
+		<Footer />
+	</body>
+</html>
